@@ -17,8 +17,8 @@ type Lesson = {
 // Contenido provisional: no representa el índice oficial del libro.
 const lessons: Lesson[] = [
   { number: 1, chinese: "你好", pinyin: "Nǐ hǎo", title: "Hola", subtitle: "Saludos y primeros sonidos", duration: 50, status: "available", oralTutor: true },
-  { number: 2, chinese: "谢谢", pinyin: "Xièxie", title: "Gracias", duration: 45, status: "locked", oralTutor: true },
-  { number: 3, chinese: "你好吗", pinyin: "Nǐ hǎo ma", title: "¿Cómo estás?", duration: 50, status: "locked", oralTutor: true },
+  { number: 2, chinese: "谢谢你", pinyin: "Xièxie nǐ", title: "Gracias", subtitle: "Agradecimientos y respuestas básicas", duration: 50, status: "locked", oralTutor: true },
+  { number: 3, chinese: "", pinyin: "", title: "Sesión 3", status: "locked", oralTutor: false },
   { number: 4, chinese: "你叫什么名字", pinyin: "Nǐ jiào shénme míngzi", title: "¿Cómo te llamas?", duration: 50, status: "locked", oralTutor: true },
   { number: 5, chinese: "你是哪国人", pinyin: "Nǐ shì nǎ guó rén", title: "¿De qué país eres?", duration: 50, status: "locked", oralTutor: true },
   { number: 6, chinese: "我的家", pinyin: "Wǒ de jiā", title: "Mi familia", duration: 55, status: "locked", oralTutor: false },
@@ -115,11 +115,12 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
 }
 
 export default function CoursePage() {
-  const { lesson1Completed, completedSessions, nextSession } = useCourseProgress();
+  const { lesson1Completed, lesson2Completed, completedSessions, nextSession } = useCourseProgress();
   const courseLessons = lessons.map((lesson): Lesson => ({
     ...lesson,
     status: lesson.number === 1 ? (lesson1Completed ? "completed" : "available")
-      : lesson.number === 2 && lesson1Completed ? "available" : "locked",
+      : lesson.number === 2 ? (lesson2Completed ? "completed" : lesson1Completed ? "available" : "locked")
+      : lesson.number === 3 && lesson1Completed && lesson2Completed ? "available" : "locked",
   }));
   return (
     <main lang="es" className="min-h-screen bg-[#F6F1E8] text-[#10284F]">

@@ -48,7 +48,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href={nextHref} className={`inline-flex min-h-12 items-center justify-center gap-6 rounded-full bg-[#1F5EFF] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#174ACB] ${focus}`}>
-                {lesson1Completed ? "Continuar con Sesión 2" : "Continuar clase"} <span aria-hidden="true">↗</span>
+                {lesson1Completed ? `Continuar con Sesión ${nextSession}` : "Continuar clase"} <span aria-hidden="true">↗</span>
               </Link>
               <Link href="/course" className={`inline-flex min-h-12 items-center justify-center rounded-full border border-[#12263F]/25 px-6 py-3 text-sm font-semibold transition-colors hover:bg-white ${focus}`}>Ver curso</Link>
             </div>
@@ -78,8 +78,8 @@ export default function DashboardPage() {
               <h2 id="next-class-heading" className="text-xs font-bold tracking-[0.16em] uppercase">Próxima clase</h2>
               <span className="-rotate-3 rounded-lg border border-[#12263F]/15 bg-[#F6F1E8] px-4 py-2 text-xs font-medium">{lesson1Completed ? "Siguiente sesión" : "Aprox. 50 min"}</span>
             </div>
-            <p className="mt-8 inline-block rounded-full border border-[#1F5EFF]/30 px-3 py-1 text-xs font-semibold tracking-wider text-[#1F5EFF]">Sesión {nextSession}</p>
-            <h3 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">{lesson1Completed ? "Sesión 2" : <><span lang="zh-Hans" className="font-serif">你好</span> <span className="text-[#1F5EFF]">·</span> Nǐ hǎo</>}</h3>
+            <p className="mt-8 inline-block rounded-full border border-[#1F5EFF]/30 px-3 py-1 text-xs font-semibold tracking-wider text-[#1F5EFF]">Siguiente: Sesión {nextSession}</p>
+            <h3 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">{lesson1Completed ? `Sesión ${nextSession}` : <><span lang="zh-Hans" className="font-serif">你好</span> <span className="text-[#1F5EFF]">·</span> Nǐ hǎo</>}</h3>
             <p className="mt-3 text-lg text-[#43546A]">{lesson1Completed ? "Tu siguiente paso en el curso" : "Saludos y primeros sonidos"}</p>
             {!lesson1Completed && <ol className="mt-8 grid grid-cols-2 gap-x-5 gap-y-6 border-t border-dashed border-[#12263F]/25 pt-6 sm:grid-cols-4">
               {stages.map((stage) => (
@@ -91,7 +91,7 @@ export default function DashboardPage() {
               ))}
             </ol>}
             <Link href={nextHref} className={`mt-8 inline-flex min-h-12 w-full items-center justify-between gap-4 rounded-full bg-[#12263F] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1F5EFF] sm:w-auto sm:gap-12 ${focus}`}>
-              {lesson1Completed ? "Continuar con Sesión 2" : "Empezar clase"} <span aria-hidden="true">↗</span>
+              {lesson1Completed ? `Continuar con Sesión ${nextSession}` : "Empezar clase"} <span aria-hidden="true">↗</span>
             </Link>
           </section>
 
