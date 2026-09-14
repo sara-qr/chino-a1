@@ -136,15 +136,22 @@ export default function CoursePage() {
             </div>
           </div>
           <div aria-hidden="true" className="relative isolate mx-auto flex h-80 w-full max-w-sm flex-col items-center justify-center overflow-hidden rounded-[3rem] rounded-br-[6rem] bg-[#123EBB] text-[#F6F1E8] sm:h-96">
-            <span className="absolute left-7 top-6 -rotate-12 text-5xl">✳</span>
-            <span className="absolute right-8 top-9 h-10 w-14 rotate-12 rounded-[50%] border-2 border-current after:absolute after:-bottom-2 after:left-2 after:h-3 after:w-3 after:rotate-12 after:border-b-2 after:border-l-2 after:bg-[#123EBB]" />
-            <div className="relative mt-3 flex h-44 w-40 -rotate-[8deg] flex-col items-center justify-center rounded-l-lg rounded-r-[1.75rem] border-2 border-current before:absolute before:inset-y-0 before:left-4 before:border-l before:border-current after:absolute after:-bottom-3 after:left-2 after:right-0 after:h-3 after:rounded-b-lg after:border-x-2 after:border-b-2 after:border-current sm:h-52 sm:w-48">
-              <span className="font-serif text-8xl sm:text-9xl">学</span>
-              <span className="mt-3 text-xs tracking-[0.15em]">xué · aprender</span>
+            <span className="absolute left-7 top-7 -rotate-12 text-4xl text-[#F6F1E8]/80">✳</span>
+            <span className="absolute right-8 top-7 flex h-11 w-20 rotate-[8deg] items-center justify-center gap-1.5 rounded-[50%] border border-[#F6F1E8]/65 after:absolute after:-bottom-1.5 after:left-4 after:h-3 after:w-3 after:-skew-x-12 after:border-b after:border-l after:border-[#F6F1E8]/65 after:bg-[#123EBB]">
+              <span className="h-1 w-1 rounded-full bg-[#F6F1E8]" /><span className="h-1 w-1 rounded-full bg-[#F6F1E8]" /><span className="h-1 w-1 rounded-full bg-[#F6F1E8]" />
+            </span>
+            <span className="absolute left-[8%] top-[24%] h-40 w-[84%] -rotate-[18deg] rounded-[50%] border border-[#F6F1E8]/20 sm:h-52" />
+            <div className="absolute left-[12%] top-[24%] flex h-40 w-[39%] -rotate-[12deg] flex-col items-center justify-center rounded-[1.25rem] rounded-tr-[2.25rem] border border-[#10284F]/10 bg-[#F6F1E8] text-[#123EBB] shadow-[4px_6px_0_0_#10284F33] sm:h-48">
+              <span lang="zh-Hans" className="font-serif text-7xl leading-none sm:text-8xl">你</span>
+              <span className="mt-4 text-sm tracking-[0.16em]">nǐ</span>
             </div>
-            <span className="absolute bottom-20 right-9 h-32 w-3 rotate-[24deg] rounded-t-full border-2 border-current after:absolute after:-bottom-4 after:-left-0.5 after:h-4 after:w-3 after:rounded-b-full after:border-2 after:border-current" />
-            <span className="absolute bottom-12 left-6 h-12 w-12 -rotate-12 rounded-bl-full border-b-2 border-l-2 border-current" />
-            <span className="mt-9 rotate-[-4deg] font-mono text-sm">Paso a paso.</span>
+            <div className="absolute right-[11%] top-[33%] flex h-40 w-[39%] rotate-[10deg] flex-col items-center justify-center rounded-[1.25rem] rounded-br-[2.5rem] border border-[#10284F]/10 bg-[#E9DFC9] text-[#123EBB] shadow-[4px_6px_0_0_#10284F33] sm:h-48">
+              <span lang="zh-Hans" className="font-serif text-7xl leading-none sm:text-8xl">好</span>
+              <span className="mt-4 text-sm tracking-[0.16em]">hǎo</span>
+            </div>
+            <span className="absolute bottom-[23%] left-[7%] h-8 w-5 -rotate-[20deg] rounded-bl-full border-b border-l border-[#F6F1E8]/70" />
+            <span className="absolute right-[8%] top-[35%] h-5 w-3 rotate-[20deg] rounded-tr-full border-r border-t border-[#F6F1E8]/70" />
+            <span className="absolute bottom-7 left-9 -rotate-[4deg] font-serif text-lg italic">Todo empieza con un hola.</span>
           </div>
         </header>
 
