@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#F6F1E8] text-[#12263F]">
@@ -7,9 +9,9 @@ export default function Home() {
             Chino A1
           </div>
 
-          <button className="rounded-full border border-[#12263F] px-5 py-2 text-sm font-medium">
+          <Link href="/progress" className="rounded-full border border-[#12263F] px-5 py-2 text-sm font-medium">
             Mi progreso
-          </button>
+          </Link>
         </header>
 
         <div className="grid gap-12 py-20 md:grid-cols-2 md:items-center">
@@ -31,13 +33,13 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <button className="rounded-full bg-[#1F5EFF] px-7 py-4 font-medium text-white">
+              <Link href="/course/lesson-1" className="rounded-full bg-[#1F5EFF] px-7 py-4 font-medium text-white">
                 Empezar curso
-              </button>
+              </Link>
 
-              <button className="rounded-full border border-[#12263F] px-7 py-4 font-medium">
+              <Link href="/course" className="rounded-full border border-[#12263F] px-7 py-4 font-medium">
                 Ver temario
-              </button>
+              </Link>
             </div>
           </div>
 
