@@ -17,22 +17,24 @@ function announce(lesson: (typeof progressLessons)[number]) {
   window.dispatchEvent(new CustomEvent(REMOTE_PROGRESS_APPLIED, { detail: { key: lesson.key } }));
 }
 
-// Keep each account's local work, without uploading one person's answers to another.
-export function prepareAccount(userId: string) {
+// The active lesson keys are a view of one owner's workspace, including guests.
+// Save the old workspace before switching; never adopt anonymous answers on login.
+export function prepareAccount(userId: string | null) {
   const owner = window.localStorage.getItem(OWNER);
   if (owner === userId) return;
-  if (owner) {
-    const keys = progressLessons.flatMap(({ key }) => [key, metaKey(key)]);
-    window.localStorage.setItem(archiveKey(owner), JSON.stringify(Object.fromEntries(keys.map((key) => [key, window.localStorage.getItem(key)]))));
-    const saved = JSON.parse(window.localStorage.getItem(archiveKey(userId)) || "{}") as Record<string, string | null>;
-    for (const key of keys) {
-      if (typeof saved[key] === "string") window.localStorage.setItem(key, saved[key]);
-      else window.localStorage.removeItem(key);
-    }
+  const keys = progressLessons.flatMap(({ key }) => [key, metaKey(key)]);
+  const guestArchive = "chino-a1:progress-guest";
+  const previousArchive = owner ? archiveKey(owner) : guestArchive;
+  const nextArchive = userId ? archiveKey(userId) : guestArchive;
+  const saved = JSON.parse(window.localStorage.getItem(nextArchive) || "{}") as Record<string, string | null>;
+  window.localStorage.setItem(previousArchive, JSON.stringify(Object.fromEntries(keys.map((key) => [key, window.localStorage.getItem(key)]))));
+  for (const key of keys) {
+    if (typeof saved[key] === "string") window.localStorage.setItem(key, saved[key]);
+    else window.localStorage.removeItem(key);
   }
-  // The first account adopts the existing anonymous progress.
-  window.localStorage.setItem(OWNER, userId);
-  if (owner) progressLessons.forEach(announce);
+  if (userId) window.localStorage.setItem(OWNER, userId);
+  else window.localStorage.removeItem(OWNER);
+  progressLessons.forEach(announce);
 }
 
 function advancement(data: Snapshot) {

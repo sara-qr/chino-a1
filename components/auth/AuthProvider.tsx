@@ -19,13 +19,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queueMicrotask(() => { if (active) { setReady(true); setStatus("Conexión no configurada. Puedes seguir estudiando en este navegador."); } });
       return () => { active = false; };
     }
+    function applyUser(nextUser: User | null) {
+      try {
+        prepareAccount(nextUser?.id ?? null);
+        setUser(nextUser);
+      } catch {
+        setUser(null);
+        setStatus("No se ha podido preparar el progreso de la cuenta. La sincronización está pausada para conservar tus datos locales.");
+      }
+      setReady(true);
+    }
+    let authEventReceived = false;
     // The callback stays synchronous: no Supabase calls inside its auth lock.
     const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-      if (active) { setUser(session?.user ?? null); setReady(true); if (event === "SIGNED_OUT") setStatus(""); }
+      if (active) { authEventReceived = true; if (event === "SIGNED_OUT") setStatus(""); applyUser(session?.user ?? null); }
     });
     client.auth.getSession().then(({ data, error }) => {
-      if (!active) return;
-      setUser(data.session?.user ?? null); setReady(true);
+      if (!active || authEventReceived) return;
+      if (!error) applyUser(data.session?.user ?? null);
+      else setReady(true);
       if (error) setStatus("No se ha podido recuperar tu cuenta. El progreso local sigue disponible.");
     }).catch(() => { if (active) { setReady(true); setStatus("Sin conexión con tu cuenta. Puedes continuar en local."); } });
     return () => { active = false; subscription.unsubscribe(); };
@@ -48,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("Sincronizando progreso…");
         const task = async () => {
           if (controller.signal.aborted) return;
-          prepareAccount(userId!);
           await syncProgress(client!, userId!, controller.signal);
         };
         if (navigator.locks) await navigator.locks.request(`chino-a1:sync:${userId}`, { signal: controller.signal }, task);

@@ -98,7 +98,7 @@ test('network error preserves local data and retries without duplicates', async 
 });
 
 test('account switch archives local progress without sharing it with another account', () => {
-  setup(); l1.saveLesson1Progress(completed()); sync.prepareAccount('user-a');
+  setup(); sync.prepareAccount('user-a'); l1.saveLesson1Progress(completed());
   sync.prepareAccount('user-b'); assert.equal(l1.loadLesson1Progress().sessionCompleted, false);
   l1.saveLesson1Progress({ ...l1.initialLesson1State(), phase: 1 });
   sync.prepareAccount('user-a'); assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
@@ -140,5 +140,66 @@ test('unsupported remote data and cancelled sessions never write to the cloud', 
   const controller = new AbortController(); controller.abort();
   const empty = fakeClient(); await sync.syncProgress(empty, 'user-a', controller.signal);
   assert.equal(empty.writes.length, 0);
+  assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
+});
+
+test('new account starts at zero without importing guest progress from either lesson', async () => {
+  setup();
+  l1.saveLesson1Progress(completed());
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 3, answers: { p1: '谢谢' } });
+  const guest = sync.progressLessons.map(({ key }) => [key, window.localStorage.getItem(key), window.localStorage.getItem(local.metaKey(key))]);
+  sync.prepareAccount('new-user');
+  const client = fakeClient(); await run(client, 'new-user');
+  assert.equal(l1.lesson1Snapshot(l1.loadLesson1Progress()).progress, 0);
+  assert.equal(l2.lesson2Snapshot(l2.loadLesson2Progress()).progress, 0);
+  assert.deepEqual(l2.loadLesson2Progress().answers, {});
+  assert.equal(client.rows.length, 0);
+  assert.equal(client.writes.length, 0);
+  sync.prepareAccount(null);
+  for (const [key, raw, meta] of guest) {
+    assert.equal(window.localStorage.getItem(key), raw);
+    assert.equal(window.localStorage.getItem(local.metaKey(key)), meta);
+  }
+});
+
+test('existing account loads its remote progress rather than the more advanced guest state', async () => {
+  setup(); l1.saveLesson1Progress(completed());
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 5, sessionCompleted: true });
+  sync.prepareAccount('existing-user');
+  const data = l1.lesson1Snapshot({ ...l1.initialLesson1State(), phase: 1, answers: { intro: '4' } });
+  const client = fakeClient([{ id: 'remote-1', user_id: 'existing-user', lesson_id: 'lesson-1', data, updated_at: '2026-09-01T12:00:00Z' }]);
+  await run(client, 'existing-user');
+  assert.equal(l1.loadLesson1Progress().phase, 1);
+  assert.equal(l1.loadLesson1Progress().answers.intro, '4');
+  assert.equal(l1.loadLesson1Progress().sessionCompleted, false);
+  assert.equal(l2.loadLesson2Progress().sessionCompleted, false);
+  assert.equal(client.rows.length, 1);
+});
+
+test('account-generated progress survives logout and syncs later without guest answers', async () => {
+  setup(); l1.saveLesson1Progress(completed()); sync.prepareAccount('new-user');
+  l1.saveLesson1Progress({ ...l1.initialLesson1State(), phase: 1, answers: { intro: '3' } });
+  const own = window.localStorage.getItem(l1.LESSON_1_PROGRESS_KEY);
+  sync.prepareAccount(null);
+  assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 2 });
+  sync.prepareAccount('new-user');
+  assert.equal(window.localStorage.getItem(l1.LESSON_1_PROGRESS_KEY), own);
+  assert.equal(l2.loadLesson2Progress().phase, 0);
+  const client = fakeClient(); await run(client, 'new-user');
+  assert.equal(client.rows.length, 1);
+  assert.equal(client.rows[0].data.answers.intro, '3');
+  assert.equal(client.rows[0].completed, false);
+  sync.prepareAccount('another-new-user'); await run(client, 'another-new-user');
+  assert.equal(l1.loadLesson1Progress().phase, 0);
+  assert.equal(client.rows.length, 1);
+});
+
+test('logout during a cloud read leaves guest progress untouched and prevents writes', async () => {
+  setup(); l1.saveLesson1Progress(completed()); sync.prepareAccount('user-a');
+  l1.saveLesson1Progress({ ...l1.initialLesson1State(), phase: 1 });
+  const client = fakeClient([], null, () => sync.prepareAccount(null));
+  await run(client);
+  assert.equal(client.writes.length, 0);
   assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
 });

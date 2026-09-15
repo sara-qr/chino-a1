@@ -44,7 +44,7 @@ add constraint user_progress_user_lesson_unique unique (user_id, lesson_id);
 - Cuando ambas revisiones tienen fecha válida, gana la más reciente (incluye reinicios y repetición de ejercicios). Para datos antiguos sin fecha se prioriza el estado más avanzado: finalización, fase y número de respuestas. Se conserva una instantánea completa, no se mezclan respuestas de intentos distintos. Las fechas dependen del reloj del dispositivo.
 - Al reiniciar, el estado vacío se sincroniza como una revisión explícita; no requiere DELETE remoto y no afecta a otra lección.
 - Se lee antes de escribir; si el alumno responde durante la petición, se reintenta sin reemplazar su nueva respuesta. Las peticiones tienen un límite de 12 segundos. Se agrupan cambios durante 500 ms y se reintenta al recuperar conexión y cada 30 segundos mientras la app está abierta.
-- El primer login incorpora el progreso anónimo. Logout conserva el progreso local. Al cambiar de cuenta se archiva el estado local anterior en `chino-a1:progress-account:<user_id>` y se recupera el de la nueva cuenta, sin subir datos ajenos. `chino-a1:progress-owner` identifica la cuenta propietaria del estado visible. Estos datos locales permanecen en ese navegador después de salir.
+- El progreso invitado se conserva aparte en `chino-a1:progress-guest`. El primer login de una cuenta en este navegador abre un estado vacío y carga su progreso remoto si existe; nunca incorpora respuestas anónimas. Sin progreso remoto empieza en cero y sincroniza únicamente los avances que esa cuenta genere después. Logout archiva el progreso de la cuenta y restaura el del invitado. Al volver a una cuenta se recupera su propio estado local (incluidos avances offline pendientes) y se compara con su estado remoto. Los archivos locales de cuentas usan `chino-a1:progress-account:<user_id>`; `chino-a1:progress-owner` identifica la cuenta del estado visible. Una cuenta ya sincronizada con el comportamiento anterior conserva sus datos: no se borran retrospectivamente.
 - Dashboard y Curso siguen usando `useCourseProgress`: reciben los eventos existentes tras importar datos. Las páginas de sesión también reciben el evento de importación y restauran su estado si ya estaban abiertas. Entre pestañas se escucha `storage`.
 
 ## Validación reproducible
@@ -59,7 +59,7 @@ Las pruebas locales usan una tabla simulada: no sustituyen una comprobación aut
 
 1. Crear una cuenta de prueba en `/register`, confirmar el email si corresponde e iniciar sesión en `/login`.
 2. Avanzar en ambas sesiones y esperar a «Progreso sincronizado». En Supabase verificar una sola fila por lección con el `user_id` correcto y los estados completos en `data`.
-3. Recargar, cerrar sesión y comprobar que las respuestas locales siguen presentes.
+3. Recargar, cerrar sesión y comprobar que vuelve el progreso invitado y que al iniciar sesión otra vez se recuperan las respuestas de la cuenta.
 4. Iniciar sesión con la misma cuenta en otro navegador y comprobar recuperación de respuestas, fases, resultados y Dashboard/Curso.
 5. Reiniciar solo Sesión 2 y comprobar 5 %, 1/20 y Sesión 3 bloqueada si Sesión 1 estaba completada. Volver a entrar en otro navegador y verificar que el reinicio se recupera.
 6. Interrumpir la conexión y responder: comprobar guardado local y sincronización posterior al reconectar.
