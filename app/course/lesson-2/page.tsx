@@ -1,5 +1,6 @@
 "use client";
 
+import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { buttonStyle, Choice, Matching, ToneCard } from "@/components/lesson/Activities";
@@ -30,7 +31,21 @@ export default function LessonTwoPage() {
       try { setLoaded({ state: loadLesson2Progress(), error: "" }); }
       catch { setLoaded({ state: initialLesson2State(), error: "No se ha podido acceder al progreso local." }); }
     });
-    return () => { active = false; };
+    function refresh(event: Event) {
+      const key = event instanceof StorageEvent ? event.key : (event as CustomEvent<{ key: string }>).detail?.key;
+      if (key !== null && key !== "chino-a1:lesson-2-progress") return;
+      try {
+        setLoaded({ state: loadLesson2Progress(), error: "" });
+        setGeneration((previous) => previous + 1);
+      } catch { /* Keep the in-memory lesson usable if storage is unavailable. */ }
+    }
+    window.addEventListener(REMOTE_PROGRESS_APPLIED, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener(REMOTE_PROGRESS_APPLIED, refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
   if (!loaded) return <main lang="es" className="min-h-screen bg-[#F6F1E8] p-8 text-[#10284F]"><p role="status">Cargando tu sesión…</p></main>;
   if (!lesson1Completed) return <main lang="es" className="min-h-screen bg-[#F6F1E8] px-6 py-12 text-[#10284F]"><div className="mx-auto max-w-xl rounded-3xl border border-[#10284F]/15 bg-[#FFFCF5] p-8"><h1 className="text-3xl font-semibold">Primero, tu primer saludo</h1><p className="mt-4">Completa la Sesión 1 para continuar con la Sesión 2.</p><Link href="/course/lesson-1" className={`${buttonStyle} mt-6 inline-block bg-[#1748D5] text-white`}>Ir a la Sesión 1</Link></div></main>;

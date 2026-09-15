@@ -1,3 +1,4 @@
+import { writeLocalProgress } from "./localProgress";
 import { lesson2MeaningPairs, lesson2Quiz, lesson2Review, lesson2SoundPairs } from "../lessons/lesson2";
 
 export const LESSON_2_PROGRESS_KEY = "chino-a1:lesson-2-progress";
@@ -64,11 +65,10 @@ export function loadLesson2Progress() {
   return parseLesson2Progress(window.localStorage.getItem(LESSON_2_PROGRESS_KEY));
 }
 export function saveLesson2Progress(state: Lesson2State) {
-  if (JSON.stringify(state) === JSON.stringify(initialLesson2State())) window.localStorage.removeItem(LESSON_2_PROGRESS_KEY);
-  else window.localStorage.setItem(LESSON_2_PROGRESS_KEY, JSON.stringify(lesson2Snapshot(state)));
-  window.dispatchEvent(new CustomEvent(LESSON_2_PROGRESS_CHANGED));
+  const empty = JSON.stringify(state) === JSON.stringify(initialLesson2State());
+  writeLocalProgress(LESSON_2_PROGRESS_KEY, LESSON_2_PROGRESS_CHANGED, empty ? null : lesson2Snapshot(state));
 }
+
 export function clearLesson2Progress() {
-  window.localStorage.removeItem(LESSON_2_PROGRESS_KEY);
-  window.dispatchEvent(new CustomEvent(LESSON_2_PROGRESS_CHANGED));
+  writeLocalProgress(LESSON_2_PROGRESS_KEY, LESSON_2_PROGRESS_CHANGED, null, true);
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AccountMenu } from "@/components/auth/AccountMenu";
 
 const links = [
   { href: "/dashboard", label: "Inicio" },
@@ -59,6 +60,7 @@ export default function Navigation() {
           </ul>
         </nav>
       </div>
+      <AccountMenu />
     </header>
   );
 }

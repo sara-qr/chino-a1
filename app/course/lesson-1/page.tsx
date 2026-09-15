@@ -1,5 +1,6 @@
 "use client";
 
+import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import { LessonShell } from "@/components/lesson/LessonShell";
 import { LessonCompletion } from "@/components/lesson/LessonCompletion";
 import { LessonTutor } from "@/components/lesson/LessonTutor";
@@ -50,7 +51,21 @@ export default function LessonOnePage() {
         setLoaded({ state: initialLesson1State(), error: "El navegador no permite acceder al progreso local. Puedes continuar, pero puede que no se guarde." });
       }
     });
-    return () => { active = false; };
+    function refresh(event: Event) {
+      const key = event instanceof StorageEvent ? event.key : (event as CustomEvent<{ key: string }>).detail?.key;
+      if (key !== null && key !== "chino-a1:lesson-1-progress") return;
+      try {
+        setLoaded({ state: loadLesson1Progress(), error: "" });
+        setGeneration((previous) => previous + 1);
+      } catch { /* Keep the in-memory lesson usable if storage is unavailable. */ }
+    }
+    window.addEventListener(REMOTE_PROGRESS_APPLIED, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener(REMOTE_PROGRESS_APPLIED, refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   if (!loaded) return <main lang="es" className="min-h-screen bg-[#F6F1E8] p-8 text-[#10284F]"><p role="status">Cargando tu sesión…</p></main>;
