@@ -26,6 +26,7 @@ const phases: LessonPhase[] = [
 ].map((phase, index) => ({ ...phase, label: LESSON_PHASE_LABELS[index] }));
 
 export default function LessonTwoPage() {
+  const navigation = useLessonNavigation();
   const [loaded, setLoaded] = useState<{ state: Lesson2State; error: string } | null>(null);
   const [generation, setGeneration] = useState(0);
   const { lesson1Completed } = useCourseProgress();
@@ -54,12 +55,13 @@ export default function LessonTwoPage() {
   }, []);
   if (!loaded) return <main lang="es" className="min-h-screen bg-[#F6F1E8] p-8 text-[#10284F]"><p role="status">Cargando tu sesión…</p></main>;
   if (!lesson1Completed) return <main lang="es" className="min-h-screen bg-[#F6F1E8] px-6 py-12 text-[#10284F]"><div className="mx-auto max-w-xl rounded-3xl border border-[#10284F]/15 bg-[#FFFCF5] p-8"><h1 className="text-3xl font-semibold">Primero, tu primer saludo</h1><p className="mt-4">Completa la Sesión 1 para continuar con la Sesión 2.</p><Link href="/course/lesson-1" className={`${buttonStyle} mt-6 inline-block bg-[#1748D5] text-white`}>Ir a la Sesión 1</Link></div></main>;
-  return <LessonTwoSession key={generation} initial={loaded.state} initialError={loaded.error} onReset={() => {
+  return <LessonTwoSession navigation={navigation} key={generation} initial={loaded.state} initialError={loaded.error} onReset={() => {
+    navigation.exitReview();
     setLoaded({ state: initialLesson2State(), error: "" }); setGeneration((previous) => previous + 1);
   }} />;
 }
 
-function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2State; initialError: string; onReset: () => void }) {
+function LessonTwoSession({ initial, initialError, onReset, navigation }: { initial: Lesson2State; initialError: string; onReset: () => void; navigation: ReturnType<typeof useLessonNavigation> }) {
   const [state, setState] = useState(initial);
   const [storageError, setStorageError] = useState(initialError);
   const [copyStatus, setCopyStatus] = useState(initial.tutorCopied ? "Ya has copiado la ficha del tutor. Puedes volver a copiarla." : "");
@@ -67,8 +69,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
   const { completedSessions, courseProgressPercent } = useCourseProgress();
   const snapshot = lesson2Snapshot(state);
   const { answers, meanings, sounds, showResult, sessionCompleted, listeningCompleted } = state;
-  const navigation = useLessonNavigation(sessionCompleted, state.phase, (phase) => setState((previous) => ({ ...previous, phase })));
-  const { phase } = navigation;
+  const phase = navigation.visiblePhase(sessionCompleted, state.phase);
   const finished = phase === phases.length;
 
   useEffect(() => {
@@ -82,7 +83,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
   }, [state]);
 
   function move(next: number) {
-    navigation.move(next);
+    navigation.move(next, sessionCompleted, (phase) => setState((previous) => ({ ...previous, phase })));
     requestAnimationFrame(() => { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ behavior: "instant", block: "start" }); });
   }
   function answer(id: string, value: string) {
@@ -108,7 +109,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
       {sessionCompleted && !finished && <div className="mt-4 rounded-2xl bg-[#E3E9F8] p-4 text-sm"><p>Sesión completada · Revisión de tus respuestas guardadas. Resultado: {snapshot.score} / 5.</p><button onClick={() => move(phases.length)} className={`${buttonStyle} mt-2 border border-[#10284F]/25`}>Volver al cierre</button></div>}
     </>}
     completion={<>
-      <LessonCompletion number={2} vocabulary="谢谢 · 不客气 · 不谢" pronunciation="Dar las gracias, responder y pronunciar con atención al tono y a las sílabas suaves." score={snapshot.score} maxScore={5} practiceDone={snapshot.quizCompleted} courseProgress={courseProgressPercent} storageError={storageError} onReview={() => move(0)} />
+      <LessonCompletion number={2} vocabulary="谢谢 · 不客气 · 不谢" pronunciation="Dar las gracias, responder y pronunciar con atención al tono y a las sílabas suaves." score={snapshot.score} maxScore={5} practiceDone={snapshot.quizCompleted} courseProgress={courseProgressPercent} storageError={storageError} onReviewSession={() => { navigation.onReviewSession(); requestAnimationFrame(() => heading.current?.scrollIntoView({ block: "start" })); }} />
       <p className="text-sm text-[#43546A]">{completedSessions} / 20 sesiones completadas · {completedSessions === 2 ? "Sesión 3 disponible en el curso." : "Consulta tu progreso en el curso."}</p>
     </>}
   >

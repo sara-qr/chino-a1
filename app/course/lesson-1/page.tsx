@@ -43,6 +43,7 @@ No utilices vocabulario de lecciones posteriores.
 Corrígeme paso a paso.`;
 
 export default function LessonOnePage() {
+  const navigation = useLessonNavigation();
   const [loaded, setLoaded] = useState<{ state: Lesson1State; error: string } | null>(null);
   const [generation, setGeneration] = useState(0);
 
@@ -75,14 +76,15 @@ export default function LessonOnePage() {
 
   if (!loaded) return <main lang="es" className="min-h-screen bg-[#F6F1E8] p-8 text-[#10284F]"><p role="status">Cargando tu sesión…</p></main>;
 
-  return <LessonOneSession key={generation} initial={loaded.state} initialError={loaded.error} onReset={() => {
+  return <LessonOneSession navigation={navigation} key={generation} initial={loaded.state} initialError={loaded.error} onReset={() => {
+    navigation.exitReview();
     setLoaded({ state: initialLesson1State(), error: "" });
     setGeneration((previous) => previous + 1);
   }} />;
 }
 
-function LessonOneSession({ initial, initialError, onReset }: {
-  initial: Lesson1State; initialError: string; onReset: () => void;
+function LessonOneSession({ initial, initialError, onReset, navigation }: {
+  initial: Lesson1State; initialError: string; onReset: () => void; navigation: ReturnType<typeof useLessonNavigation>;
 }) {
   const { courseProgressPercent } = useCourseProgress();
   const [writingCompleted, setWritingCompleted] = useState(initial.writingCompleted);
@@ -97,8 +99,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
   const [sessionCompleted, setSessionCompleted] = useState(initial.sessionCompleted);
   const [copyStatus, setCopyStatus] = useState(initial.tutorCopied ? "Ya has copiado la ficha del tutor. Puedes volver a copiarla." : "");
   const [storageError, setStorageError] = useState(initialError);
-  const navigation = useLessonNavigation(sessionCompleted, savedPhase, setSavedPhase);
-  const { phase } = navigation;
+  const phase = navigation.visiblePhase(sessionCompleted, savedPhase);
   const tutorPhase = stages.length - 1;
   const finished = phase === stages.length;
   const snapshot = useMemo(() => lesson1Snapshot({
@@ -137,7 +138,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
   const score = snapshot.score;
   const progress = snapshot.progress;
   function move(next: number) {
-    navigation.move(next);
+    navigation.move(next, sessionCompleted, setSavedPhase);
     requestAnimationFrame(() => {
       heading.current?.focus({ preventScroll: true });
       heading.current?.scrollIntoView({ behavior: "instant", block: "start" });
@@ -162,7 +163,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
         {storageError && <p role="alert" className="mt-4 rounded-2xl bg-[#FBE9E5] p-4 text-sm text-[#913329]">{storageError}</p>}
         {sessionCompleted && !finished && <div className="mt-4 rounded-2xl bg-[#E3E9F8] p-4 text-sm"><p>Sesión completada · Revisión de tus respuestas guardadas. Resultado: {score} / 4.</p><button onClick={() => move(stages.length)} className={`${buttonStyle} mt-2 border border-[#10284F]/25`}>Volver al cierre</button></div>}
       </>}
-      completion={<LessonCompletion number={1} vocabulary="你好 · 你 · 好" pronunciation="Pronunciación: 4 tonos" score={score} maxScore={4} practiceDone={practiceDone} courseProgress={courseProgressPercent} storageError={storageError} onReview={() => move(0)} />}
+      completion={<LessonCompletion number={1} vocabulary="你好 · 你 · 好" pronunciation="Pronunciación: 4 tonos" score={score} maxScore={4} practiceDone={practiceDone} courseProgress={courseProgressPercent} storageError={storageError} onReviewSession={() => { navigation.onReviewSession(); requestAnimationFrame(() => heading.current?.scrollIntoView({ block: "start" })); }} />}
     >
             {!finished && phase === 0 && <>
               <p className="max-w-xl text-lg leading-relaxed">Estamos aprendiendo chino mandarín. Antes de empezar, conoce sus tres piezas principales.</p>

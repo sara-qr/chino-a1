@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import * as jsxRuntime from 'react/jsx-runtime';
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 // Compile only these pure local modules in memory; no browser or network needed.
 const modules = new Map();
@@ -283,13 +284,17 @@ test('v2 writing and pronunciation migrate without losing activity, answers or c
 // Exercise the shared navigation hook with a minimal state harness. Progress
 // persistence and cloud reconciliation below use their actual implementation.
 function reviewNavigation(completed, savedPhase, savePhase) {
-  let reviewPhase = 6;
+  let review = { reviewMode: false, reviewPhase: 0 };
   const hookModule = { exports: {} };
   const output = ts.transpileModule(fs.readFileSync(path.resolve(testDirectory, '../hooks/useLessonNavigation.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'module', 'exports', output)((id) => id === 'react'
-    ? { useState: () => [reviewPhase, (value) => { reviewPhase = value; }] }
+    ? { useState: () => [review, (value) => { review = value; }] }
     : load('lib/progress/lessonPhase.ts'), hookModule, hookModule.exports);
-  return () => hookModule.exports.useLessonNavigation(completed, savedPhase, savePhase);
+  return () => {
+    const navigation = hookModule.exports.useLessonNavigation();
+    return { ...navigation, phase: navigation.visiblePhase(completed, savedPhase),
+      move: (phase) => navigation.move(phase, completed, savePhase) };
+  };
 }
 
 test('reviewing either completed lesson never changes local revisions or cloud results', async () => {
@@ -306,6 +311,17 @@ test('reviewing either completed lesson never changes local revisions or cloud r
     const writes = client.writes.length;
     const navigation = reviewNavigation(true, read().phase, () => assert.fail('Review must not save a phase'));
     assert.equal(navigation().phase, 6);
+    const button = reviewButton(navigation().onReviewSession);
+    assert.equal(button.props.type, 'button');
+    button.props.onClick();
+    assert.equal(navigation().reviewMode, true);
+    assert.equal(navigation().phase, 0);
+    navigation().move(1);
+    assert.equal(navigation().phase, 1);
+    navigation().move(0);
+    assert.equal(navigation().phase, 0);
+    // Re-render after session data is restored: page-owned review remains active.
+    assert.equal(navigation().phase, 0);
     for (let phase = 0; phase <= 6; phase++) {
       navigation().move(phase);
       assert.equal(navigation().phase, phase);
@@ -341,4 +357,41 @@ test('Lesson 2 writing covers each essential character once with complete stroke
     assert.equal(item.geometry.medians.length, item.steps.length);
     assert.ok(item.geometry.medians.every((median) => median.length > 1));
   }
+});
+
+
+function reviewButton(onReviewSession) {
+  const source = fs.readFileSync(path.resolve(testDirectory, '../components/lesson/LessonCompletion.tsx'), 'utf8');
+  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const completionModule = { exports: {} };
+  new Function('require', 'module', 'exports', output)((id) => {
+    if (id === 'react/jsx-runtime') return jsxRuntime;
+    if (id === 'next/link') return { default: 'a' };
+    return { buttonStyle: '' };
+  }, completionModule, completionModule.exports);
+  const tree = completionModule.exports.LessonCompletion({ number: 1, vocabulary: '你好', pronunciation: '', score: 4, maxScore: 4, practiceDone: true, courseProgress: 10, storageError: '', onReviewSession });
+  function find(node) {
+    if (!node || typeof node !== 'object') return null;
+    if (node.type === 'button' && node.props.children === 'Revisar sesión') return node;
+    const children = Array.isArray(node.props?.children) ? node.props.children : [node.props?.children];
+    for (const child of children) { const result = find(child); if (result) return result; }
+    return null;
+  }
+  const button = find(tree);
+  assert.ok(button, 'The real LessonCompletion must expose its review button');
+  return button;
+}
+
+test('review exits to completion and a second click starts at Repaso again', () => {
+  const navigation = reviewNavigation(true, 6, () => assert.fail('Must not save progress'));
+  reviewButton(navigation().onReviewSession).props.onClick();
+  navigation().move(4);
+  assert.equal(navigation().phase, 4);
+  navigation().move(6);
+  assert.equal(navigation().reviewMode, false);
+  assert.equal(navigation().phase, 6);
+  reviewButton(navigation().onReviewSession).props.onClick();
+  assert.equal(navigation().phase, 0);
+  navigation().exitReview();
+  assert.equal(navigation().phase, 6);
 });

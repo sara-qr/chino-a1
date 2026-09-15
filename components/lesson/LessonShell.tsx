@@ -57,7 +57,7 @@ export function LessonShell({ number, total = 20, chinese, pinyin, spanish, topi
         <section className="mt-10" aria-labelledby="phase-heading">
           <p className="text-xs font-semibold tracking-[0.15em] uppercase">{finished ? "El primer paso ya está dado" : `Etapa 0${phase + 1} · ${phases[phase].duration}`}</p>
           <h2 ref={headingRef} tabIndex={-1} id="phase-heading" className="mt-3 scroll-mt-64 text-3xl sm:scroll-mt-40 font-semibold tracking-tight outline-none sm:text-4xl">{finished ? `Sesión ${number} completada` : phases[phase].title}</h2>
-          <fieldset disabled={completed && phase < phases.length - 1} className="mt-7 min-w-0 space-y-7">{finished ? completion : children}</fieldset>
+          <div className="mt-7">{finished ? completion : <fieldset disabled={completed && phase < phases.length - 1} className="min-w-0 space-y-7">{children}</fieldset>}</div>
         </section>
         {!finished && <nav aria-label="Navegación de la sesión" className="mt-10 flex flex-wrap justify-between gap-4 border-t border-[#10284F]/20 pt-6">
           {phase > 0 ? <button onClick={() => onMove(phase - 1)} className={`${buttonStyle} border border-[#10284F]/25`}>Anterior</button> : <span />}
