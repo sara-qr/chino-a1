@@ -1,5 +1,6 @@
 "use client";
 
+import { LESSON_PHASE_LABELS } from "@/lib/progress/lessonPhase";
 import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -7,18 +8,21 @@ import { buttonStyle, Choice, Matching, ToneCard } from "@/components/lesson/Act
 import { LessonShell, type LessonPhase } from "@/components/lesson/LessonShell";
 import { LessonCompletion } from "@/components/lesson/LessonCompletion";
 import { LessonTutor } from "@/components/lesson/LessonTutor";
+import { LessonWriting } from "@/components/lesson/LessonWriting";
+import { lesson2Writing } from "@/lib/characters/writing";
 import { LessonAudio } from "@/components/lesson/LessonAudio";
 import { useCourseProgress } from "@/hooks/useCourseProgress";
 import { lesson2MeaningPairs, lesson2Quiz, lesson2Review, lesson2SoundPairs, lesson2TutorText, lesson2Vocabulary } from "@/lib/lessons/lesson2";
 import { clearLesson2Progress, initialLesson2State, lesson2Snapshot, loadLesson2Progress, saveLesson2Progress, type Lesson2State } from "@/lib/progress/lesson2Progress";
 
 const phases: LessonPhase[] = [
-  { label: "Repaso", title: "Antes de dar las gracias", duration: "8 min" },
-  { label: "Aprende", title: "Un gracias y su respuesta", duration: "12 min" },
-  { label: "Pronuncia", title: "Escucha, pausa y repite", duration: "12 min" },
-  { label: "Practica", title: "Ponlo en práctica", duration: "12 min" },
-  { label: "Tutor", title: "Tutor oral", duration: "6 min" },
-];
+  { title: "Antes de dar las gracias", duration: "8 min" },
+  { title: "Un gracias y su respuesta", duration: "12 min" },
+  { title: "Escucha, pausa y repite", duration: "12 min" },
+  { title: "Cuatro trazos para 不", duration: "5 min" },
+  { title: "Ponlo en práctica", duration: "12 min" },
+  { title: "Tutor oral", duration: "6 min" },
+].map((phase, index) => ({ ...phase, label: LESSON_PHASE_LABELS[index] }));
 
 export default function LessonTwoPage() {
   const [loaded, setLoaded] = useState<{ state: Lesson2State; error: string } | null>(null);
@@ -93,7 +97,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
     } catch { setCopyStatus("No se ha podido copiar. Selecciona la ficha y cópiala manualmente."); }
   }
 
-  return <LessonShell number={2} chinese="谢谢你" pinyin="Xièxie nǐ" spanish="Gracias a ti" topic="Agradecimientos y respuestas básicas" duration={50}
+  return <LessonShell number={2} chinese="谢谢你" pinyin="Xièxie nǐ" spanish="Gracias a ti" topic="Agradecimientos y respuestas básicas" duration={55}
     phases={phases} phase={phase} progress={snapshot.progress} completed={sessionCompleted} headingRef={heading} onMove={move} onReset={reset}
     onComplete={() => { setState((previous) => ({ ...previous, tutorCompleted: true, sessionCompleted: true, showResult: true })); move(phases.length); }}
     beforeHeader={<>
@@ -126,7 +130,8 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
       <LessonAudio title="Diálogo 2 · Gracias a ti / De nada" source="Textbook · Lesson 2 · 02-2.mp3 · Text 2 + vocabulario" src="/audio/lesson-2/textbook-02-2.mp3" instruction="Escucha 谢谢你 / 不客气 y la presentación de 不客气. Repite primero la respuesta y después el diálogo completo. Practica tres veces usando los controles para volver al principio." transcript="A: 谢谢你！Xièxie nǐ! — Gracias a ti. B: 不客气！Bú kèqi! — De nada. Vocabulario al final: 不客气 (bú kèqi, de nada / no hay de qué)." />
       <Choice question="¿Qué tono lleva la primera sílaba xiè de xièxie?" options={["primero", "segundo", "tercero", "cuarto"]} correct="cuarto" value={answers.tone} onChange={(value) => answer("tone", value)} />
     </>}
-    {phase === 3 && <>
+    {phase === 3 && <LessonWriting characters={lesson2Writing} completed={state.writingCompleted} onCompletedChange={(writingCompleted) => setState((previous) => ({ ...previous, writingCompleted }))} />}
+    {phase === 4 && <>
       {lesson2Quiz.map((item) => <Choice key={item.id} {...item} value={answers[item.id]} onChange={(value) => answer(item.id, value)} />)}
       <Matching title="5. Relaciona cada expresión con su pinyin" pairs={lesson2SoundPairs} options={lesson2SoundPairs.map(([, sound]) => sound)} values={sounds} onChange={(key, value) => setState((previous) => ({ ...previous, sounds: { ...previous.sounds, [key]: value }, showResult: false }))} />
       <p className="text-sm text-[#43546A]">Cada pregunta vale un punto. Las tres parejas de pinyin cuentan juntas como un punto: máximo 5. Responde los cinco ejercicios para ver tu resultado.</p>
@@ -135,6 +140,6 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
       <LessonAudio title="Listening · Escucha los tonos y repite" source="Workbook · Lesson 2 · 02-5.mp3 · Ejercicio 6" src="/audio/lesson-2/workbook-02-5.mp3" instruction="El ejercicio pide escuchar, escribir los tonos y leer en voz alta. Numera del 1 al 20 en papel. Escucha cada sílaba, anota el tono que reconoces y repítela. Pausa cuando lo necesites. Practicamos sonidos: no necesitas aprender el significado de estas palabras. Este listening no tiene corrección automática ni suma puntos al quiz." />
       <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-[#1748D5]" checked={listeningCompleted} onChange={(event) => setState((previous) => ({ ...previous, listeningCompleted: event.target.checked }))} />He terminado el listening</label>
     </>}
-    {phase === 4 && <LessonTutor objectives={["Saludar con 你好", "Dar las gracias con 谢谢 y 谢谢你", "Responder con 不客气 o 不谢", "Imitar los tonos y las sílabas suaves del audio"]} text={lesson2TutorText} onCopy={copyTutor} copyStatus={copyStatus} conversation={<div className="mt-6 border-t border-white/25 pt-5"><p lang="zh-Hans" className="font-serif text-3xl">A: 谢谢你！<br />B: 不客气！</p><p className="mt-3 text-sm">Xièxie nǐ! · Gracias a ti.<br />Bú kèqi! · De nada.</p></div>} />}
+    {phase === 5 && <LessonTutor objectives={["Saludar con 你好", "Dar las gracias con 谢谢 y 谢谢你", "Responder con 不客气 o 不谢", "Imitar los tonos y las sílabas suaves del audio"]} text={lesson2TutorText} onCopy={copyTutor} copyStatus={copyStatus} conversation={<div className="mt-6 border-t border-white/25 pt-5"><p lang="zh-Hans" className="font-serif text-3xl">A: 谢谢你！<br />B: 不客气！</p><p className="mt-3 text-sm">Xièxie nǐ! · Gracias a ti.<br />Bú kèqi! · De nada.</p></div>} />}
   </LessonShell>;
 }

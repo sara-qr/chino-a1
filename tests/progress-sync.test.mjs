@@ -59,7 +59,7 @@ function fakeClient(rows = [], fail = null, beforeRead = () => {}) {
   } };
 }
 const run = (client, user = 'user-a') => sync.syncProgress(client, user, new AbortController().signal);
-const completed = () => ({ ...l1.initialLesson1State(), phase: 5, sessionCompleted: true, tutorCompleted: true });
+const completed = () => ({ ...l1.initialLesson1State(), phase: 6, sessionCompleted: true, tutorCompleted: true });
 
 test('legacy completion beats an undated empty local/remote snapshot; newer reset wins', () => {
   setup();
@@ -75,7 +75,7 @@ test('legacy completion beats an undated empty local/remote snapshot; newer rese
 test('both lessons upload once, recover remotely, and reset only lesson 2', async () => {
   setup(); sync.prepareAccount('user-a');
   l1.saveLesson1Progress(completed());
-  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 5, sessionCompleted: true });
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 6, sessionCompleted: true });
   const client = fakeClient(); await run(client);
   assert.equal(client.rows.length, 2);
   assert.ok(client.rows.every((r) => r.user_id === 'user-a' && r.completed && r.progress === 100));
@@ -134,7 +134,7 @@ test('corrupt local data cannot overwrite valid remote completion using a stale 
 
 test('unsupported remote data and cancelled sessions never write to the cloud', async () => {
   setup(); sync.prepareAccount('user-a'); l1.saveLesson1Progress(completed());
-  const client = fakeClient([{ id: 'row-1', user_id: 'user-a', lesson_id: 'lesson-1', data: { version: 2 } }]);
+  const client = fakeClient([{ id: 'row-1', user_id: 'user-a', lesson_id: 'lesson-1', data: { version: 4 } }]);
   await assert.rejects(run(client), /no compatible/);
   assert.equal(client.writes.length, 0);
   const controller = new AbortController(); controller.abort();
@@ -164,7 +164,7 @@ test('new account starts at zero without importing guest progress from either le
 
 test('existing account loads its remote progress rather than the more advanced guest state', async () => {
   setup(); l1.saveLesson1Progress(completed());
-  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 5, sessionCompleted: true });
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 6, sessionCompleted: true });
   sync.prepareAccount('existing-user');
   const data = l1.lesson1Snapshot({ ...l1.initialLesson1State(), phase: 1, answers: { intro: '4' } });
   const client = fakeClient([{ id: 'remote-1', user_id: 'existing-user', lesson_id: 'lesson-1', data, updated_at: '2026-09-01T12:00:00Z' }]);
@@ -202,4 +202,80 @@ test('logout during a cloud read leaves guest progress untouched and prevents wr
   await run(client);
   assert.equal(client.writes.length, 0);
   assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
+});
+
+test('v1 phases migrate to the same activity and current phases remain stable', () => {
+  setup();
+  for (const lesson of [l1, l2]) {
+    const initial = lesson.initialLesson1State || lesson.initialLesson2State;
+    const parse = lesson.parseLesson1Progress || lesson.parseLesson2Progress;
+    const snapshot = lesson.lesson1Snapshot || lesson.lesson2Snapshot;
+    for (let phase = 0; phase < 5; phase++) {
+      const old = { ...initial(), version: 1, phase, answers: { intro: '4', p1: '谢谢' } };
+      delete old.writingCompleted;
+      const migrated = parse(JSON.stringify(old));
+      assert.equal(migrated.phase, phase >= 3 ? phase + 1 : phase);
+      assert.equal(migrated.writingCompleted, false);
+      assert.equal(parse(JSON.stringify(snapshot(migrated))).phase, migrated.phase);
+    }
+    const complete = parse(JSON.stringify({ ...initial(), version: 1, phase: 5, sessionCompleted: true }));
+    assert.equal(complete.phase, 6);
+    assert.equal(complete.sessionCompleted, true);
+    assert.equal(snapshot(complete).progress, 100);
+  }
+});
+
+test('writing completion persists in both lessons, syncs and resets independently', async () => {
+  setup(); sync.prepareAccount('user-a');
+  l1.saveLesson1Progress({ ...completed(), writingCompleted: true });
+  l2.saveLesson2Progress({ ...l2.initialLesson2State(), phase: 3, writingCompleted: true });
+  const client = fakeClient(); await run(client);
+  for (const row of client.rows) {
+    assert.equal(row.data.version, 3);
+    assert.equal(row.data.writingCompleted, true);
+    assert.equal(row.data.exerciseCompleted.writing, true);
+  }
+  window.localStorage.removeItem(l2.LESSON_2_PROGRESS_KEY);
+  window.localStorage.removeItem(local.metaKey(l2.LESSON_2_PROGRESS_KEY));
+  await run(client);
+  assert.equal(l2.loadLesson2Progress().phase, 3);
+  assert.equal(l2.loadLesson2Progress().writingCompleted, true);
+  l2.clearLesson2Progress(); await run(client);
+  assert.equal(l2.loadLesson2Progress().writingCompleted, false);
+  assert.equal(l1.loadLesson1Progress().writingCompleted, true);
+  assert.equal(l1.loadLesson1Progress().sessionCompleted, true);
+});
+
+test('legacy cloud tutor progress is restored as Tutor, not Practica or Cierre', async () => {
+  setup(); sync.prepareAccount('user-a');
+  const old = { ...l2.initialLesson2State(), version: 1, phase: 4, tutorCopied: true };
+  delete old.writingCompleted;
+  const client = fakeClient([{ id: 'legacy-2', user_id: 'user-a', lesson_id: 'lesson-2', data: old, updated_at: '2026-09-01T12:00:00Z' }]);
+  await run(client);
+  assert.equal(l2.loadLesson2Progress().phase, 5);
+  assert.equal(l2.loadLesson2Progress().tutorCopied, true);
+  assert.equal(l2.loadLesson2Progress().sessionCompleted, false);
+  assert.equal(client.rows[0].data.version, 3);
+});
+
+
+test('v2 writing and pronunciation migrate without losing activity, answers or completion', () => {
+  setup();
+  for (const [initial, parse, snapshot] of [
+    [l1.initialLesson1State, l1.parseLesson1Progress, l1.lesson1Snapshot],
+    [l2.initialLesson2State, l2.parseLesson2Progress, l2.lesson2Snapshot],
+  ]) {
+    for (let phase = 0; phase < 6; phase++) {
+      const old = { ...initial(), version: 2, phase, writingCompleted: true, tutorCopied: true };
+      const migrated = parse(JSON.stringify(old));
+      assert.equal(migrated.phase, phase === 2 ? 3 : phase === 3 ? 2 : phase);
+      assert.equal(migrated.writingCompleted, true);
+      assert.equal(migrated.tutorCopied, true);
+      assert.deepEqual(parse(JSON.stringify(snapshot(migrated))), migrated);
+    }
+    const complete = parse(JSON.stringify({ ...initial(), version: 2, phase: 6, sessionCompleted: true, writingCompleted: true }));
+    assert.equal(complete.phase, 6);
+    assert.equal(snapshot(complete).progress, 100);
+    assert.equal(complete.writingCompleted, true);
+  }
 });

@@ -50,14 +50,14 @@ export function LessonShell({ number, total = 20, chinese, pinyin, spanish, topi
           <div role="progressbar" aria-label="Progreso de la sesión" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} className="mt-3 h-2 overflow-hidden rounded-full bg-[#10284F]/10">
             <div className="h-full rounded-full bg-[#1748D5]" style={{ width: `${progress}%` }} />
           </div>
-          <ol aria-label="Etapas de la sesión" className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <ol aria-label="Etapas de la sesión" className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {phases.map((stage, index) => <li key={stage.label} aria-current={!finished && phase === index ? "step" : undefined} className={`rounded-2xl border px-3 py-3 text-sm ${!finished && phase === index ? "border-[#1748D5] bg-[#1748D5] text-white" : "border-[#10284F]/15"}`}><span className="mr-2 font-mono text-xs">{String(index + 1).padStart(2, "0")}</span>{stage.label}</li>)}
           </ol>
         </header>
         <section className="mt-10" aria-labelledby="phase-heading">
           <p className="text-xs font-semibold tracking-[0.15em] uppercase">{finished ? "El primer paso ya está dado" : `Etapa 0${phase + 1} · ${phases[phase].duration}`}</p>
           <h2 ref={headingRef} tabIndex={-1} id="phase-heading" className="mt-3 scroll-mt-64 text-3xl sm:scroll-mt-40 font-semibold tracking-tight outline-none sm:text-4xl">{finished ? `Sesión ${number} completada` : phases[phase].title}</h2>
-          <fieldset disabled={completed && phase < phases.length - 1} className="mt-7 min-w-0 space-y-7">{finished ? completion : children}</fieldset>
+          <fieldset disabled={completed && phase < phases.length - 1 && phases[phase]?.label !== "Escribe"} className="mt-7 min-w-0 space-y-7">{finished ? completion : children}</fieldset>
         </section>
         {!finished && <nav aria-label="Navegación de la sesión" className="mt-10 flex flex-wrap justify-between gap-4 border-t border-[#10284F]/20 pt-6">
           {phase > 0 ? <button onClick={() => onMove(phase - 1)} className={`${buttonStyle} border border-[#10284F]/25`}>Anterior</button> : <span />}

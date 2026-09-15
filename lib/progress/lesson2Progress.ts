@@ -1,3 +1,4 @@
+import { restoreLessonPhase } from "./lessonPhase";
 import { writeLocalProgress } from "./localProgress";
 import { lesson2MeaningPairs, lesson2Quiz, lesson2Review, lesson2SoundPairs } from "../lessons/lesson2";
 
@@ -5,6 +6,7 @@ export const LESSON_2_PROGRESS_KEY = "chino-a1:lesson-2-progress";
 export const LESSON_2_PROGRESS_CHANGED = "chino-a1:lesson-2-progress-changed";
 export type Lesson2State = {
   phase: number;
+  writingCompleted: boolean;
   answers: Record<string, string>;
   meanings: Record<string, string>;
   sounds: Record<string, string>;
@@ -15,11 +17,12 @@ export type Lesson2State = {
   sessionCompleted: boolean;
 };
 export function initialLesson2State(): Lesson2State {
-  return { phase: 0, answers: {}, meanings: {}, sounds: {}, showResult: false, listeningCompleted: false, tutorCopied: false, tutorCompleted: false, sessionCompleted: false };
+  return { phase: 0, writingCompleted: false, answers: {}, meanings: {}, sounds: {}, showResult: false, listeningCompleted: false, tutorCopied: false, tutorCompleted: false, sessionCompleted: false };
 }
 export function lesson2Snapshot(state: Lesson2State) {
   // Answered is different from correct. The listening is self-assessed, not scored.
   const exerciseCompleted = {
+    writing: state.writingCompleted,
     ...Object.fromEntries([...lesson2Review, ...lesson2Quiz].map(({ id }) => [id, Boolean(state.answers[id])])),
     meanings: Object.fromEntries(lesson2MeaningPairs.map(([word]) => [word, Boolean(state.meanings[word])])),
     meaningMatching: lesson2MeaningPairs.every(([word]) => Boolean(state.meanings[word])),
@@ -30,12 +33,12 @@ export function lesson2Snapshot(state: Lesson2State) {
   };
   const quizCompleted = lesson2Quiz.every(({ id }) => Boolean(state.answers[id])) && exerciseCompleted.p5;
   return {
-    version: 1, ...state,
+    version: 3, ...state,
     score: lesson2Quiz.reduce((score, item) => score + Number(state.answers[item.id] === item.correct), 0)
       + Number(lesson2SoundPairs.every(([word, answer]) => state.sounds[word] === answer)),
     exerciseCompleted, quizCompleted,
     practiceCompleted: quizCompleted && state.listeningCompleted,
-    progress: state.sessionCompleted ? 100 : state.phase * 20,
+    progress: state.sessionCompleted ? 100 : Math.round(state.phase / 6 * 100),
   };
 }
 function record(value: unknown): Record<string, unknown> {
@@ -49,10 +52,11 @@ export function parseLesson2Progress(raw: string | null): Lesson2State {
   if (!raw) return initialLesson2State();
   try {
     const data = record(JSON.parse(raw));
-    if (data.version !== 1) return initialLesson2State();
+    if (data.version !== 1 && data.version !== 2 && data.version !== 3) return initialLesson2State();
     const completed = data.sessionCompleted === true;
     return {
-      phase: completed ? 5 : typeof data.phase === "number" && Number.isInteger(data.phase) && data.phase >= 0 && data.phase <= 4 ? data.phase : 0,
+      phase: restoreLessonPhase(data.phase, data.version, completed),
+      writingCompleted: data.writingCompleted === true,
       answers: answers(data.answers, { ...Object.fromEntries([...lesson2Review, ...lesson2Quiz].map((item) => [item.id, item.options])), tone: ["primero", "segundo", "tercero", "cuarto"] }),
       meanings: answers(data.meanings, Object.fromEntries(lesson2MeaningPairs.map(([word]) => [word, lesson2MeaningPairs.map(([, meaning]) => meaning)]))),
       sounds: answers(data.sounds, Object.fromEntries(lesson2SoundPairs.map(([word]) => [word, lesson2SoundPairs.map(([, sound]) => sound)]))),

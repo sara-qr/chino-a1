@@ -1,3 +1,4 @@
+import { restoreLessonPhase } from "./lessonPhase";
 import { writeLocalProgress } from "./localProgress";
 export const LESSON_1_PROGRESS_KEY = "chino-a1:lesson-1-progress";
 
@@ -5,6 +6,7 @@ export const LESSON_1_PROGRESS_CHANGED = "chino-a1:lesson-1-progress-changed";
 
 export type Lesson1State = {
   phase: number;
+  writingCompleted: boolean;
   answers: Record<string, string>;
   meanings: Record<string, string>;
   sounds: Record<string, string>;
@@ -19,7 +21,7 @@ const words = ["你", "好", "你好"];
 
 export function initialLesson1State(): Lesson1State {
   return {
-    phase: 0, answers: {}, meanings: {}, sounds: {}, showResult: false, listeningCompleted: false,
+    phase: 0, writingCompleted: false, answers: {}, meanings: {}, sounds: {}, showResult: false, listeningCompleted: false,
     tutorCopied: false, tutorCompleted: false, sessionCompleted: false,
   };
 }
@@ -28,6 +30,7 @@ export function initialLesson1State(): Lesson1State {
 // The listening activity is done on paper and is explicitly marked by the learner.
 export function lesson1Snapshot(state: Lesson1State) {
   const exerciseCompleted = {
+    writing: state.writingCompleted,
     listening: state.listeningCompleted,
     intro: Boolean(state.answers.intro),
     meanings: Object.fromEntries(words.map((word) => [word, Boolean(state.meanings[word])])),
@@ -40,14 +43,14 @@ export function lesson1Snapshot(state: Lesson1State) {
     p4: Boolean(state.answers.p4),
   };
   return {
-    version: 1,
+    version: 3,
     ...state,
     score: Number(state.answers.p1 === "Hola") + Number(state.answers.p2 === "tú")
       + Number(state.answers.p4 === "mǎ")
       + Number(state.sounds["你"] === "nǐ" && state.sounds["好"] === "hǎo" && state.sounds["你好"] === "Nǐ hǎo"),
     exerciseCompleted,
     practiceCompleted: exerciseCompleted.listening && exerciseCompleted.p1 && exerciseCompleted.p2 && exerciseCompleted.p3 && exerciseCompleted.p4,
-    progress: state.sessionCompleted ? 100 : state.phase * 20,
+    progress: state.sessionCompleted ? 100 : Math.round(state.phase / 6 * 100),
   };
 }
 
@@ -67,11 +70,12 @@ export function parseLesson1Progress(raw: string | null): Lesson1State {
   if (!raw) return initial;
   try {
     const data = record(JSON.parse(raw));
-    if (data.version !== 1) return initial;
+    if (data.version !== 1 && data.version !== 2 && data.version !== 3) return initial;
     const completed = data.sessionCompleted === true;
     return {
       // A completed session always reopens on its summary; review is explicit.
-      phase: completed ? 5 : typeof data.phase === "number" && Number.isInteger(data.phase) && data.phase >= 0 && data.phase <= 4 ? data.phase : 0,
+      phase: restoreLessonPhase(data.phase, data.version, completed),
+      writingCompleted: data.writingCompleted === true,
       answers: validAnswers(data.answers, {
         intro: ["2", "3", "4", "5"], tone: ["mā", "má", "mǎ", "mà"],
         p1: ["Adiós", "Hola", "Gracias", "Sí"], p2: ["yo", "tú", "bien", "hola"],

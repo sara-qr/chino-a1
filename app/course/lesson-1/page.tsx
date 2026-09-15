@@ -1,18 +1,21 @@
 "use client";
 
+import { LESSON_PHASE_LABELS } from "@/lib/progress/lessonPhase";
 import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import { LessonShell } from "@/components/lesson/LessonShell";
 import { LessonCompletion } from "@/components/lesson/LessonCompletion";
 import { LessonTutor } from "@/components/lesson/LessonTutor";
+import { LessonWriting } from "@/components/lesson/LessonWriting";
+import { lesson1Writing } from "@/lib/characters/writing";
 import { LessonAudio } from "@/components/lesson/LessonAudio";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buttonStyle, Choice, Matching, ToneCard } from "@/components/lesson/Activities";
 
 import { clearLesson1Progress, initialLesson1State, lesson1Snapshot, loadLesson1Progress, saveLesson1Progress, type Lesson1State } from "@/lib/progress/lesson1Progress";
 
-const stages = ["Introducción", "Aprende", "Pronuncia", "Practica", "Tutor"];
-const titles = ["Antes de decir tu primera palabra", "Tu primera expresión", "Ahora vamos a decirlo", "Comprueba lo que has aprendido", "Tutor oral"];
-const durations = ["10 min", "15 min", "15 min", "10 min", "Práctica oral"];
+const stages = LESSON_PHASE_LABELS;
+const titles = ["Antes de decir tu primera palabra", "Tu primera expresión", "Ahora vamos a decirlo", "Tus primeros trazos", "Comprueba lo que has aprendido", "Tutor oral"];
+const durations = ["10 min", "15 min", "15 min", "8 min", "10 min", "Práctica oral"];
 const meaningPairs: [string, string][] = [["你", "tú"], ["好", "bien / bueno"], ["你好", "hola"]];
 const soundPairs: [string, string][] = [["你", "nǐ"], ["好", "hǎo"], ["你好", "Nǐ hǎo"]];
 const tutorText = `TUTOR · SESIÓN 1
@@ -79,6 +82,7 @@ export default function LessonOnePage() {
 function LessonOneSession({ initial, initialError, onReset }: {
   initial: Lesson1State; initialError: string; onReset: () => void;
 }) {
+  const [writingCompleted, setWritingCompleted] = useState(initial.writingCompleted);
   const [phase, setPhase] = useState(initial.phase);
   const [answers, setAnswers] = useState(initial.answers);
   const [meanings, setMeanings] = useState(initial.meanings);
@@ -93,22 +97,22 @@ function LessonOneSession({ initial, initialError, onReset }: {
   const tutorPhase = stages.length - 1;
   const finished = phase === stages.length;
   const snapshot = useMemo(() => lesson1Snapshot({
-    phase, answers, meanings, sounds, showResult, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted,
-  }), [phase, answers, meanings, sounds, showResult, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
+    phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted,
+  }), [phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
 
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
       try {
-        saveLesson1Progress({ phase, answers, meanings, sounds, showResult, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted });
+        saveLesson1Progress({ phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted });
         setStorageError("");
       } catch {
         setStorageError("No se ha podido guardar el progreso en este navegador. Tu sesión sigue disponible mientras mantengas esta página abierta.");
       }
     });
     return () => { active = false; };
-  }, [phase, answers, meanings, sounds, showResult, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
+  }, [phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
 
   function resetSession() {
     try {
@@ -145,7 +149,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
   }
 
   return (
-    <LessonShell number={1} chinese="你好" pinyin="Nǐ hǎo" spanish="Hola" topic="Saludos y primeros sonidos" duration={50}
+    <LessonShell number={1} chinese="你好" pinyin="Nǐ hǎo" spanish="Hola" topic="Saludos y primeros sonidos" duration={58}
       phases={stages.map((label, index) => ({ label, title: titles[index], duration: durations[index] }))}
       phase={phase} progress={progress} completed={sessionCompleted} headingRef={heading} onMove={move}
       onComplete={() => { setTutorCompleted(true); setSessionCompleted(true); setShowResult(true); move(stages.length); }} onReset={resetSession}
@@ -185,7 +189,8 @@ function LessonOneSession({ initial, initialError, onReset }: {
               />
               <Choice question="Selecciona el tercer tono" options={["mā", "má", "mǎ", "mà"]} correct="mǎ" value={answers.tone} onChange={(value) => update("tone", value)} />
             </>}
-            {!finished && phase === 3 && <>
+            {!finished && phase === 3 && <LessonWriting characters={lesson1Writing} completed={writingCompleted} onCompletedChange={setWritingCompleted} />}
+            {!finished && phase === 4 && <>
               <LessonAudio
                 title="Listening · Identifica los tonos"
                 source="Workbook · Lesson 1 · 01-5.mp3 · Ejercicio 6"

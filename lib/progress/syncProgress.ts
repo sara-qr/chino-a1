@@ -63,7 +63,7 @@ function validLocal(raw: string | null) {
   if (raw === null) return true; // explicit reset metadata may accompany an absent key
   try {
     const data = JSON.parse(raw);
-    return data?.version === 1 && typeof data.sessionCompleted === "boolean";
+    return (data?.version === 1 || data?.version === 2 || data?.version === 3) && typeof data.sessionCompleted === "boolean";
   } catch { return false; }
 }
 
@@ -82,7 +82,7 @@ export async function syncProgress(client: SupabaseClient, userId: string, signa
     const row = rows?.[0];
     let winner = local;
     if (row) {
-      if (!row.data || row.data.version !== 1 || typeof row.data.sessionCompleted !== "boolean") {
+      if (!row.data || (row.data.version !== 1 && row.data.version !== 2 && row.data.version !== 3) || typeof row.data.sessionCompleted !== "boolean") {
         throw new Error("El progreso remoto tiene un formato no compatible. Se conserva sin sobrescribirlo.");
       }
       const timestamp = row.data._sync?.updatedAt || row.updated_at;
