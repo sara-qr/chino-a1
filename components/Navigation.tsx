@@ -18,7 +18,7 @@ export default function Navigation() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#12263F]/10 bg-[#F6F1E8]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-8">
         <Link
           href="/dashboard"
           className="flex shrink-0 items-center gap-3 text-[#12263F]"
@@ -34,8 +34,8 @@ export default function Navigation() {
           </div>
         </Link>
 
-        <nav aria-label="Navegación principal">
-          <ul className="flex flex-wrap items-center justify-end gap-1">
+        <nav aria-label="Navegación principal" className="min-w-0">
+          <ul className="flex flex-wrap items-center gap-1 lg:flex-nowrap lg:justify-end">
             {links.map(({ href, label }) => {
               const isActive =
                 pathname === href ||
@@ -46,7 +46,7 @@ export default function Navigation() {
                   <Link
                     href={href}
                     aria-current={isActive ? "page" : undefined}
-                    className={`inline-flex rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-[#1F5EFF] text-white"
                         : "text-[#43546A] hover:bg-[#1F5EFF]/10 hover:text-[#1F5EFF]"
@@ -57,10 +57,10 @@ export default function Navigation() {
                 </li>
               );
             })}
+            <li className="relative ml-1 shrink-0"><AccountMenu /></li>
           </ul>
         </nav>
       </div>
-      <AccountMenu />
     </header>
   );
 }
