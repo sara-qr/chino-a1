@@ -1,5 +1,7 @@
 "use client";
 
+import { useCourseProgress } from "@/hooks/useCourseProgress";
+import { useLessonNavigation } from "@/hooks/useLessonNavigation";
 import { LESSON_PHASE_LABELS } from "@/lib/progress/lessonPhase";
 import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import { LessonShell } from "@/components/lesson/LessonShell";
@@ -82,8 +84,9 @@ export default function LessonOnePage() {
 function LessonOneSession({ initial, initialError, onReset }: {
   initial: Lesson1State; initialError: string; onReset: () => void;
 }) {
+  const { courseProgressPercent } = useCourseProgress();
   const [writingCompleted, setWritingCompleted] = useState(initial.writingCompleted);
-  const [phase, setPhase] = useState(initial.phase);
+  const [savedPhase, setSavedPhase] = useState(initial.phase);
   const [answers, setAnswers] = useState(initial.answers);
   const [meanings, setMeanings] = useState(initial.meanings);
   const [sounds, setSounds] = useState(initial.sounds);
@@ -94,25 +97,27 @@ function LessonOneSession({ initial, initialError, onReset }: {
   const [sessionCompleted, setSessionCompleted] = useState(initial.sessionCompleted);
   const [copyStatus, setCopyStatus] = useState(initial.tutorCopied ? "Ya has copiado la ficha del tutor. Puedes volver a copiarla." : "");
   const [storageError, setStorageError] = useState(initialError);
+  const navigation = useLessonNavigation(sessionCompleted, savedPhase, setSavedPhase);
+  const { phase } = navigation;
   const tutorPhase = stages.length - 1;
   const finished = phase === stages.length;
   const snapshot = useMemo(() => lesson1Snapshot({
-    phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted,
-  }), [phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
+    phase: savedPhase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted,
+  }), [savedPhase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
 
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
       try {
-        saveLesson1Progress({ phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted });
+        saveLesson1Progress({ phase: savedPhase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted });
         setStorageError("");
       } catch {
         setStorageError("No se ha podido guardar el progreso en este navegador. Tu sesión sigue disponible mientras mantengas esta página abierta.");
       }
     });
     return () => { active = false; };
-  }, [phase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
+  }, [savedPhase, answers, meanings, sounds, showResult, writingCompleted, listeningCompleted, tutorCopied, tutorCompleted, sessionCompleted]);
 
   function resetSession() {
     try {
@@ -132,7 +137,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
   const score = snapshot.score;
   const progress = snapshot.progress;
   function move(next: number) {
-    setPhase(Math.max(0, Math.min(next, stages.length)));
+    navigation.move(next);
     requestAnimationFrame(() => {
       heading.current?.focus({ preventScroll: true });
       heading.current?.scrollIntoView({ behavior: "instant", block: "start" });
@@ -141,7 +146,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
   async function copyTutor() {
     try {
       await navigator.clipboard.writeText(tutorText);
-      setTutorCopied(true);
+      if (!sessionCompleted) setTutorCopied(true);
       setCopyStatus("Ficha copiada. Abre ChatGPT y pega esta ficha para empezar tu práctica oral.");
     } catch {
       setCopyStatus("No se ha podido copiar. Selecciona la ficha y cópiala manualmente.");
@@ -157,7 +162,7 @@ function LessonOneSession({ initial, initialError, onReset }: {
         {storageError && <p role="alert" className="mt-4 rounded-2xl bg-[#FBE9E5] p-4 text-sm text-[#913329]">{storageError}</p>}
         {sessionCompleted && !finished && <div className="mt-4 rounded-2xl bg-[#E3E9F8] p-4 text-sm"><p>Sesión completada · Revisión de tus respuestas guardadas. Resultado: {score} / 4.</p><button onClick={() => move(stages.length)} className={`${buttonStyle} mt-2 border border-[#10284F]/25`}>Volver al cierre</button></div>}
       </>}
-      completion={<LessonCompletion number={1} vocabulary="你好 · 你 · 好" pronunciation="Pronunciación: 4 tonos" score={score} maxScore={4} practiceDone={practiceDone} courseProgress={5} storageError={storageError} onReview={() => move(0)} />}
+      completion={<LessonCompletion number={1} vocabulary="你好 · 你 · 好" pronunciation="Pronunciación: 4 tonos" score={score} maxScore={4} practiceDone={practiceDone} courseProgress={courseProgressPercent} storageError={storageError} onReview={() => move(0)} />}
     >
             {!finished && phase === 0 && <>
               <p className="max-w-xl text-lg leading-relaxed">Estamos aprendiendo chino mandarín. Antes de empezar, conoce sus tres piezas principales.</p>

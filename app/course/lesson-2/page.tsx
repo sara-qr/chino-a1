@@ -1,5 +1,6 @@
 "use client";
 
+import { useLessonNavigation } from "@/hooks/useLessonNavigation";
 import { LESSON_PHASE_LABELS } from "@/lib/progress/lessonPhase";
 import { REMOTE_PROGRESS_APPLIED } from "@/lib/progress/localProgress";
 import Link from "next/link";
@@ -19,7 +20,7 @@ const phases: LessonPhase[] = [
   { title: "Antes de dar las gracias", duration: "8 min" },
   { title: "Un gracias y su respuesta", duration: "12 min" },
   { title: "Escucha, pausa y repite", duration: "12 min" },
-  { title: "Cuatro trazos para 不", duration: "5 min" },
+  { title: "Escribe 谢谢 y 不客气", duration: "15 min" },
   { title: "Ponlo en práctica", duration: "12 min" },
   { title: "Tutor oral", duration: "6 min" },
 ].map((phase, index) => ({ ...phase, label: LESSON_PHASE_LABELS[index] }));
@@ -65,7 +66,9 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
   const heading = useRef<HTMLHeadingElement>(null);
   const { completedSessions, courseProgressPercent } = useCourseProgress();
   const snapshot = lesson2Snapshot(state);
-  const { phase, answers, meanings, sounds, showResult, sessionCompleted, listeningCompleted } = state;
+  const { answers, meanings, sounds, showResult, sessionCompleted, listeningCompleted } = state;
+  const navigation = useLessonNavigation(sessionCompleted, state.phase, (phase) => setState((previous) => ({ ...previous, phase })));
+  const { phase } = navigation;
   const finished = phase === phases.length;
 
   useEffect(() => {
@@ -79,7 +82,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
   }, [state]);
 
   function move(next: number) {
-    setState((previous) => ({ ...previous, phase: Math.max(0, Math.min(next, phases.length)) }));
+    navigation.move(next);
     requestAnimationFrame(() => { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ behavior: "instant", block: "start" }); });
   }
   function answer(id: string, value: string) {
@@ -92,12 +95,12 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
   async function copyTutor() {
     try {
       await navigator.clipboard.writeText(lesson2TutorText);
-      setState((previous) => ({ ...previous, tutorCopied: true }));
+      if (!sessionCompleted) setState((previous) => ({ ...previous, tutorCopied: true }));
       setCopyStatus("Ficha copiada. Abre ChatGPT y pega esta ficha para empezar tu práctica oral.");
     } catch { setCopyStatus("No se ha podido copiar. Selecciona la ficha y cópiala manualmente."); }
   }
 
-  return <LessonShell number={2} chinese="谢谢你" pinyin="Xièxie nǐ" spanish="Gracias a ti" topic="Agradecimientos y respuestas básicas" duration={55}
+  return <LessonShell number={2} chinese="谢谢你" pinyin="Xièxie nǐ" spanish="Gracias a ti" topic="Agradecimientos y respuestas básicas" duration={65}
     phases={phases} phase={phase} progress={snapshot.progress} completed={sessionCompleted} headingRef={heading} onMove={move} onReset={reset}
     onComplete={() => { setState((previous) => ({ ...previous, tutorCompleted: true, sessionCompleted: true, showResult: true })); move(phases.length); }}
     beforeHeader={<>
@@ -130,7 +133,7 @@ function LessonTwoSession({ initial, initialError, onReset }: { initial: Lesson2
       <LessonAudio title="Diálogo 2 · Gracias a ti / De nada" source="Textbook · Lesson 2 · 02-2.mp3 · Text 2 + vocabulario" src="/audio/lesson-2/textbook-02-2.mp3" instruction="Escucha 谢谢你 / 不客气 y la presentación de 不客气. Repite primero la respuesta y después el diálogo completo. Practica tres veces usando los controles para volver al principio." transcript="A: 谢谢你！Xièxie nǐ! — Gracias a ti. B: 不客气！Bú kèqi! — De nada. Vocabulario al final: 不客气 (bú kèqi, de nada / no hay de qué)." />
       <Choice question="¿Qué tono lleva la primera sílaba xiè de xièxie?" options={["primero", "segundo", "tercero", "cuarto"]} correct="cuarto" value={answers.tone} onChange={(value) => answer("tone", value)} />
     </>}
-    {phase === 3 && <LessonWriting characters={lesson2Writing} completed={state.writingCompleted} onCompletedChange={(writingCompleted) => setState((previous) => ({ ...previous, writingCompleted }))} />}
+    {phase === 3 && <LessonWriting expressions={["谢谢", "不客气"]} characters={lesson2Writing} completed={state.writingCompleted} onCompletedChange={(writingCompleted) => setState((previous) => ({ ...previous, writingCompleted }))} />}
     {phase === 4 && <>
       {lesson2Quiz.map((item) => <Choice key={item.id} {...item} value={answers[item.id]} onChange={(value) => answer(item.id, value)} />)}
       <Matching title="5. Relaciona cada expresión con su pinyin" pairs={lesson2SoundPairs} options={lesson2SoundPairs.map(([, sound]) => sound)} values={sounds} onChange={(key, value) => setState((previous) => ({ ...previous, sounds: { ...previous.sounds, [key]: value }, showResult: false }))} />

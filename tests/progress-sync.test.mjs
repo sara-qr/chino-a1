@@ -279,3 +279,66 @@ test('v2 writing and pronunciation migrate without losing activity, answers or c
     assert.equal(complete.writingCompleted, true);
   }
 });
+
+// Exercise the shared navigation hook with a minimal state harness. Progress
+// persistence and cloud reconciliation below use their actual implementation.
+function reviewNavigation(completed, savedPhase, savePhase) {
+  let reviewPhase = 6;
+  const hookModule = { exports: {} };
+  const output = ts.transpileModule(fs.readFileSync(path.resolve(testDirectory, '../hooks/useLessonNavigation.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  new Function('require', 'module', 'exports', output)((id) => id === 'react'
+    ? { useState: () => [reviewPhase, (value) => { reviewPhase = value; }] }
+    : load('lib/progress/lessonPhase.ts'), hookModule, hookModule.exports);
+  return () => hookModule.exports.useLessonNavigation(completed, savedPhase, savePhase);
+}
+
+test('reviewing either completed lesson never changes local revisions or cloud results', async () => {
+  for (const [initial, save, read, key] of [
+    [l1.initialLesson1State, l1.saveLesson1Progress, l1.loadLesson1Progress, l1.LESSON_1_PROGRESS_KEY],
+    [l2.initialLesson2State, l2.saveLesson2Progress, l2.loadLesson2Progress, l2.LESSON_2_PROGRESS_KEY],
+  ]) {
+    setup(); sync.prepareAccount('user-a');
+    save({ ...initial(), phase: 6, sessionCompleted: true, tutorCompleted: true, writingCompleted: true, showResult: true });
+    const client = fakeClient(); await run(client);
+    const raw = window.localStorage.getItem(key);
+    const meta = window.localStorage.getItem(local.metaKey(key));
+    const cloud = JSON.stringify(client.rows);
+    const writes = client.writes.length;
+    const navigation = reviewNavigation(true, read().phase, () => assert.fail('Review must not save a phase'));
+    assert.equal(navigation().phase, 6);
+    for (let phase = 0; phase <= 6; phase++) {
+      navigation().move(phase);
+      assert.equal(navigation().phase, phase);
+      await run(client);
+      assert.equal(window.localStorage.getItem(key), raw);
+      assert.equal(window.localStorage.getItem(local.metaKey(key)), meta);
+      assert.equal(JSON.stringify(client.rows), cloud);
+      assert.equal(client.writes.length, writes);
+      assert.equal(read().sessionCompleted, true);
+    }
+    // A reload recreates visual state on completion, keeping all stored results.
+    assert.equal(reviewNavigation(true, read().phase, () => {})().phase, 6);
+  }
+});
+
+test('unfinished navigation still saves phase normally', () => {
+  let saved = 0;
+  const navigation = reviewNavigation(false, 0, (phase) => { saved = phase; });
+  navigation().move(3);
+  assert.equal(saved, 3);
+});
+
+test('Lesson 2 writing covers each essential character once with complete stroke data', () => {
+  const source = fs.readFileSync(path.resolve(testDirectory, '../lib/characters/writing.ts'), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
+  const dataModule = { exports: {} };
+  new Function('require', 'module', 'exports', compiled)((id) => JSON.parse(fs.readFileSync(path.resolve(testDirectory, '../lib/characters', id), 'utf8')), dataModule, dataModule.exports);
+  const chars = dataModule.exports.lesson2Writing;
+  assert.deepEqual(chars.map((item) => item.character), ['谢', '不', '客', '气']);
+  assert.deepEqual(chars.map((item) => item.geometry.strokes.length), [12, 4, 9, 4]);
+  for (const item of chars) {
+    assert.equal(item.steps.length, item.geometry.strokes.length);
+    assert.equal(item.geometry.medians.length, item.steps.length);
+    assert.ok(item.geometry.medians.every((median) => median.length > 1));
+  }
+});

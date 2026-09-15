@@ -57,12 +57,12 @@ export function LessonShell({ number, total = 20, chinese, pinyin, spanish, topi
         <section className="mt-10" aria-labelledby="phase-heading">
           <p className="text-xs font-semibold tracking-[0.15em] uppercase">{finished ? "El primer paso ya está dado" : `Etapa 0${phase + 1} · ${phases[phase].duration}`}</p>
           <h2 ref={headingRef} tabIndex={-1} id="phase-heading" className="mt-3 scroll-mt-64 text-3xl sm:scroll-mt-40 font-semibold tracking-tight outline-none sm:text-4xl">{finished ? `Sesión ${number} completada` : phases[phase].title}</h2>
-          <fieldset disabled={completed && phase < phases.length - 1 && phases[phase]?.label !== "Escribe"} className="mt-7 min-w-0 space-y-7">{finished ? completion : children}</fieldset>
+          <fieldset disabled={completed && phase < phases.length - 1} className="mt-7 min-w-0 space-y-7">{finished ? completion : children}</fieldset>
         </section>
         {!finished && <nav aria-label="Navegación de la sesión" className="mt-10 flex flex-wrap justify-between gap-4 border-t border-[#10284F]/20 pt-6">
           {phase > 0 ? <button onClick={() => onMove(phase - 1)} className={`${buttonStyle} border border-[#10284F]/25`}>Anterior</button> : <span />}
           {phase < phases.length - 1 && <button onClick={() => onMove(phase + 1)} className={`${buttonStyle} bg-[#1748D5] text-white`}>Continuar</button>}
-          {phase === phases.length - 1 && <button onClick={onComplete} className={`${buttonStyle} bg-[#1748D5] text-white`}>{completed ? "Volver al cierre" : "Completar sesión"}</button>}
+          {phase === phases.length - 1 && <button onClick={completed ? () => onMove(phases.length) : onComplete} className={`${buttonStyle} bg-[#1748D5] text-white`}>{completed ? "Volver al cierre" : "Completar sesión"}</button>}
         </nav>}
         <div className="mt-8 border-t border-[#10284F]/15 pt-5">
           <button onClick={() => setConfirmReset(true)} className={`${buttonStyle} border border-[#10284F]/25`}>Reiniciar sesión</button>

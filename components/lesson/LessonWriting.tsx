@@ -11,8 +11,8 @@ function StrokeDiagram({ item, step }: { item: WritingCharacter; step?: number }
   </svg>;
 }
 
-export function LessonWriting({ characters, completed, onCompletedChange }: {
-  characters: WritingCharacter[]; completed: boolean; onCompletedChange: (value: boolean) => void;
+export function LessonWriting({ characters, completed, onCompletedChange, expressions = [] }: {
+  expressions?: string[]; characters: WritingCharacter[]; completed: boolean; onCompletedChange: (value: boolean) => void;
 }) {
   return <div className="space-y-7">
     <p className="max-w-2xl leading-relaxed text-[#43546A]">Prepara papel y lápiz. Sigue cada paso de la secuencia: el trazo nuevo está en azul y el círculo indica dónde empezar. Levanta el lápiz al terminar cada trazo, no en mitad de un giro.</p>
@@ -37,6 +37,11 @@ export function LessonWriting({ characters, completed, onCompletedChange }: {
       </ol>
       <div className="mt-7 rounded-2xl bg-[#F6F1E8] p-4 text-sm leading-relaxed"><strong>Ahora tú:</strong> escribe {item.character} 3 veces mirando el modelo y 2 veces de memoria. Después compara el orden y la posición de los trazos.</div>
     </article>)}
+    {expressions.length > 0 && <section className="rounded-2xl border border-[#10284F]/15 bg-[#FFFCF5] p-6">
+      <h3 className="text-xl font-semibold">Une los caracteres</h3>
+      <p lang="zh-Hans" className="mt-4 break-words font-serif text-4xl text-[#123EBB]">{expressions.join(" · ")}</p>
+      <p className="mt-4 text-sm leading-relaxed">Ahora escribe cada expresión completa: 3 veces mirando y 2 de memoria. En 谢谢 escribe 谢 dos veces, con el mismo orden de trazos.</p>
+    </section>}
     <label className="flex items-start gap-3 rounded-2xl border border-[#10284F]/15 bg-[#E3E9F8] p-5 text-sm">
       <input type="checkbox" checked={completed} onChange={(event) => onCompletedChange(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#1748D5]" />
       He completado la práctica de escritura: 3 veces mirando y 2 de memoria por carácter.

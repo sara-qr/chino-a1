@@ -1,6 +1,6 @@
 # Modelos de escritura A1
 
-Los archivos 你.json, 好.json y 不.json se copiaron sin modificar de
+Los archivos 你.json, 好.json, 不.json, 谢.json, 客.json y 气.json se copiaron sin modificar de
 https://github.com/chanind/hanzi-writer-data/tree/master/data el 2026-09-15.
 Contienen los contornos SVG y las medianas ordenadas de Make Me a Hanzi,
 derivados de fuentes de Arphic Technology. Se conserva íntegra ARPHICPL.TXT.
@@ -17,6 +17,6 @@ mediana correspondiente. Las instrucciones en español son propias. Los giros
 y ganchos se explican como partes de un solo trazo. En 好, el tercer trazo de 女
 es ascendente al ocupar el lado izquierdo del carácter.
 
-Sesión 2 introduce solo 不 de forma activa: reaparece en ambas respuestas
-aprendidas y tiene cuatro trazos. 谢, 客 y 气 siguen siendo vocabulario para
-reconocer, sin exigir aprender su escritura en esta sesión.
+Sesión 2 practica 谢 (12 trazos), 不 (4), 客 (9) y 气 (4), seguidos de
+las expresiones completas 谢谢 y 不客气. 谢 se muestra una sola vez.
+Los tres archivos nuevos se copiaron sin modificar del mismo origen.
